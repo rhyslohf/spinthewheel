@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wheel Spinner App</title>
+    <title>Wheel Spinner</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,87 +12,123 @@
             background-color: #000;
             color: #fff;
             font-family: Arial, sans-serif;
+            overflow: hidden;
         }
         #app {
             display: flex;
             align-items: flex-start;
             padding: 20px;
+            height: 100vh;
         }
         .input-container {
             flex: 1;
             margin-right: 20px;
+            display: flex;
+            flex-direction: column;
+            max-width: 300px;
         }
         textarea {
             background-color: #222;
             color: #fff;
             border: 1px solid #444;
         }
-        button {
-            margin-top: 10px;
-        }
         .wheel-container {
             flex: 2;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
+            width: 100%;
+        }
+        .spin-btn-container {
+            margin-bottom: 20px;
         }
         .wheel {
-            width: 400px;
-            height: 400px;
+            width: 80%;
+            max-width: 600px;
+            aspect-ratio: 1;
             border-radius: 50%;
-            border: 5px solid #fff;
             position: relative;
             overflow: hidden;
             transform-origin: center;
+            border: 5px solid white;
             transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
         }
-        .name {
+        .slice {
             position: absolute;
-            width: 50%;
-            height: 50%;
+            width: 100%;
+            height: 100%;
+            clip-path: polygon(50% 50%, 100% 0, 100% 100%);
+            transform-origin: center;
+        }
+        .slice-text {
+            position: absolute;
+            top: 50%;
             left: 50%;
-            transform-origin: 0% 100%;
+            transform-origin: 0 0;
+            transform: translate(-50%, -50%) rotate(90deg);
             text-align: center;
-            line-height: 50px;
-            color: #fff;
             font-size: 14px;
             font-weight: bold;
+            color: #fff;
         }
-        .winner {
-            margin-top: 20px;
+        .winner-marker {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: red;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none;
+        }
+        .winner-marker.visible {
+            display: block;
+        }
+        .list-group-item {
+            background-color: #333;
+            color: #fff;
         }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="input-container">
-        <textarea v-model="inputNames" class="form-control" rows="5" placeholder="Enter names separated by spaces or lines"></textarea>
+        <textarea
+            v-model="inputNames"
+            @keyup.enter="addNames"
+            class="form-control"
+            rows="5"
+            placeholder="Enter names separated by spaces or lines"
+        ></textarea>
         <button @click="addNames" class="btn btn-success btn-sm mt-2">Add Names</button>
         <button @click="clearList" class="btn btn-danger btn-sm mt-2 ms-2">Clear List</button>
         <ul class="list-group mt-3">
-            <li v-for="name in names" :key="name" class="list-group-item bg-dark text-white">{{ name }}</li>
+            <li v-for="name in names" :key="name" class="list-group-item">{{ name }}</li>
         </ul>
     </div>
     <div class="wheel-container">
+        <div class="spin-btn-container">
+            <button @click="spinWheel" class="btn btn-primary btn-lg">Spin the Wheel</button>
+        </div>
+        <div class="winner-marker" :class="{ visible: winner }">🎯 Winner</div>
         <div :style="{ transform: `rotate(${rotation}deg)` }" class="wheel">
             <template v-for="(name, index) in names">
                 <div
-                    class="name"
+                    class="slice"
                     :style="{
-                        transform: `rotate(${index * anglePerName}deg) translateX(-50%)`,
-                        backgroundColor: generateColor(index, names.length)
+                        transform: `rotate(${index * anglePerName}deg)`,
+                        backgroundColor: generateColor(index, names.length),
                     }"
                 >
-                    {{ name }}
+                    <span class="slice-text" :style="{ transform: `rotate(${anglePerName / 2}deg)` }">
+                        {{ name }}
+                    </span>
                 </div>
             </template>
-        </div>
-    </div>
-    <div class="text-center mt-4">
-        <button @click="spinWheel" class="btn btn-primary btn-lg">Spin the Wheel</button>
-        <div v-if="winner" class="winner">
-            <h2>Winner: {{ winner }}</h2>
         </div>
     </div>
 </div>
@@ -105,7 +141,6 @@ const app = Vue.createApp({
             names: JSON.parse(localStorage.getItem("names")) || [],
             rotation: 0,
             winner: "",
-            spinning: false,
         };
     },
     computed: {
@@ -128,15 +163,13 @@ const app = Vue.createApp({
                 alert("Please add names to spin the wheel!");
                 return;
             }
+            this.winner = ""; // Reset winner before spinning
             const spins = Math.floor(Math.random() * 10) + 10;
             const selectedIndex = Math.floor(Math.random() * this.names.length);
-            const finalAngle = this.anglePerName * selectedIndex;
+            const finalAngle = 360 - selectedIndex * this.anglePerName;
             this.rotation += 360 * spins + finalAngle;
-            this.winner = "";
-            this.spinning = true;
             setTimeout(() => {
                 this.winner = this.names[selectedIndex];
-                this.spinning = false;
             }, 4000);
         },
         clearList() {
